@@ -1,74 +1,933 @@
 /* MED2SYNC: a deliberately simple, browser-only academic prototype. */
-const DB = 'med2sync_v1';
+const DB = "med2sync_v1";
 const $ = (selector) => document.querySelector(selector);
-const app = $('#app');
+const app = $("#app");
 
-function read() { return JSON.parse(localStorage.getItem(DB) || 'null'); }
-function save(data) { localStorage.setItem(DB, JSON.stringify(data)); }
-function uid(prefix) { return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
-function escapeHtml(value = '') { return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
-function textList(value) { return Array.isArray(value) ? value : String(value || '').split(',').map(x => x.trim()).filter(Boolean); }
-function toast(message, type = 'success') { const el = $('#toast'); el.textContent = message; el.className = `show ${type}`; setTimeout(() => el.className = '', 3600); }
-function formatDate(value) { return new Date(value + 'T12:00:00').toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'}); }
-function status(value) { return `<span class="status ${String(value).toLowerCase()}">${escapeHtml(value)}</span>`; }
-function currentUser() { const db = read(); return db && db.session ? db.users.find(u => u.id === db.session.userId) : null; }
-function getProfile(db, userId) { return db.profiles.find(p => p.userId === userId); }
-function eventById(db, id) { return db.events.find(e => e.id === id); }
-function addLog(db, message) { db.logs.unshift({id:uid('log'), message, time:new Date().toLocaleString()}); db.logs = db.logs.slice(0, 15); }
+function read() {
+  return JSON.parse(localStorage.getItem(DB) || "null");
+}
+function save(data) {
+  localStorage.setItem(DB, JSON.stringify(data));
+}
+function uid(prefix) {
+  return (
+    prefix +
+    "_" +
+    Date.now().toString(36) +
+    Math.random().toString(36).slice(2, 6)
+  );
+}
+function escapeHtml(value = "") {
+  return String(value).replace(
+    /[&<>'"]/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[
+        c
+      ],
+  );
+}
+function textList(value) {
+  return Array.isArray(value)
+    ? value
+    : String(value || "")
+        .split(",")
+        .map((x) => x.trim())
+        .filter(Boolean);
+}
+function toast(message, type = "success") {
+  const el = $("#toast");
+  el.textContent = message;
+  el.className = `show ${type}`;
+  setTimeout(() => (el.className = ""), 3600);
+}
+function formatDate(value) {
+  return new Date(value + "T12:00:00").toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+function status(value) {
+  return `<span class="status ${String(value).toLowerCase()}">${escapeHtml(value)}</span>`;
+}
+function currentUser() {
+  const db = read();
+  return db && db.session
+    ? db.users.find((u) => u.id === db.session.userId)
+    : null;
+}
+function getProfile(db, userId) {
+  return db.profiles.find((p) => p.userId === userId);
+}
+function eventById(db, id) {
+  return db.events.find((e) => e.id === id);
+}
+function addLog(db, message) {
+  db.logs.unshift({
+    id: uid("log"),
+    message,
+    time: new Date().toLocaleString(),
+  });
+  db.logs = db.logs.slice(0, 15);
+}
 
 function seed() {
   if (read()) return;
   const events = [
-    {id:'evt_health', title:'Community Health Awareness Camp', category:'Awareness', city:'Bengaluru', date:'2026-12-03', description:'Guide visitors, support registration, and distribute preventive-care information at a neighborhood camp.', skills:['Communication','Registration'], interests:['Community health','Education'], roles:[{name:'Registration desk', capacity:4},{name:'Awareness support', capacity:6}], shifts:[{id:'sh_1', start:'2026-12-03T08:30', end:'2026-12-03T13:30', role:'Registration desk', location:'Indiranagar Community Hall'}], status:'Active'},
-    {id:'evt_blood', title:'Blood Donation Drive', category:'Logistics', city:'Bengaluru', date:'2026-12-08', description:'Help guests find stations, manage queues, and document non-clinical event activity.', skills:['Crowd coordination','Documentation'], interests:['Public health','Logistics'], roles:[{name:'Crowd coordination', capacity:5},{name:'Documentation', capacity:2}], shifts:[{id:'sh_2', start:'2026-12-08T09:00', end:'2026-12-08T15:00', role:'Crowd coordination', location:'Civic Centre'}], status:'Active'},
-    {id:'evt_mental', title:'Mental Health Awareness Workshop', category:'Education', city:'Mysuru', date:'2026-12-12', description:'Welcome participants, support information desks, and assist workshop logistics.', skills:['Communication','Information desk'], interests:['Mental wellness','Education'], roles:[{name:'Information desk', capacity:3},{name:'Event logistics', capacity:3}], shifts:[{id:'sh_3', start:'2026-12-12T10:00', end:'2026-12-12T14:00', role:'Information desk', location:'Mysuru Youth Centre'}], status:'Active'},
-    {id:'evt_senior', title:'Senior Citizen Outreach Program', category:'Outreach', city:'Bengaluru', date:'2026-12-17', description:'Coordinate check-in and help visitors navigate an accessible outreach day.', skills:['Empathy','Crowd coordination'], interests:['Senior care','Community health'], roles:[{name:'Visitor support', capacity:5},{name:'Event registration', capacity:3}], shifts:[{id:'sh_4', start:'2026-12-17T09:30', end:'2026-12-17T13:30', role:'Visitor support', location:'Jayanagar Senior Centre'}], status:'Active'},
-    {id:'evt_rural', title:'Rural Healthcare Awareness Campaign', category:'Awareness', city:'Ramanagara', date:'2026-12-21', description:'Support outreach logistics, basic registration, and awareness material distribution.', skills:['Logistics','Communication'], interests:['Rural outreach','Public health'], roles:[{name:'Logistics support', capacity:6},{name:'Awareness support', capacity:8}], shifts:[{id:'sh_5', start:'2026-12-21T08:00', end:'2026-12-21T16:00', role:'Logistics support', location:'Ramanagara Panchayat Hall'}], status:'Active'},
-    {id:'evt_women', title:"Women's Health Awareness Event", category:'Education', city:'Bengaluru', date:'2026-12-27', description:'Staff an information desk and coordinate attendee movement for community sessions.', skills:['Information desk','Communication'], interests:['Women’s health','Education'], roles:[{name:'Information desk', capacity:4},{name:'Crowd coordination', capacity:4}], shifts:[{id:'sh_6', start:'2026-12-27T10:00', end:'2026-12-27T15:00', role:'Information desk', location:'Koramangala Forum Hall'}], status:'Active'}
+    {
+      id: "evt_health",
+      title: "Community Health Awareness Camp",
+      category: "Awareness",
+      city: "Bengaluru",
+      date: "2026-12-03",
+      description:
+        "Guide visitors, support registration, and distribute preventive-care information at a neighborhood camp.",
+      skills: ["Communication", "Registration"],
+      interests: ["Community health", "Education"],
+      roles: [
+        { name: "Registration desk", capacity: 4 },
+        { name: "Awareness support", capacity: 6 },
+      ],
+      shifts: [
+        {
+          id: "sh_1",
+          start: "2026-12-03T08:30",
+          end: "2026-12-03T13:30",
+          role: "Registration desk",
+          location: "Indiranagar Community Hall",
+        },
+      ],
+      status: "Active",
+    },
+    {
+      id: "evt_blood",
+      title: "Blood Donation Drive",
+      category: "Logistics",
+      city: "Bengaluru",
+      date: "2026-12-08",
+      description:
+        "Help guests find stations, manage queues, and document non-clinical event activity.",
+      skills: ["Crowd coordination", "Documentation"],
+      interests: ["Public health", "Logistics"],
+      roles: [
+        { name: "Crowd coordination", capacity: 5 },
+        { name: "Documentation", capacity: 2 },
+      ],
+      shifts: [
+        {
+          id: "sh_2",
+          start: "2026-12-08T09:00",
+          end: "2026-12-08T15:00",
+          role: "Crowd coordination",
+          location: "Civic Centre",
+        },
+      ],
+      status: "Active",
+    },
+    {
+      id: "evt_mental",
+      title: "Mental Health Awareness Workshop",
+      category: "Education",
+      city: "Mysuru",
+      date: "2026-12-12",
+      description:
+        "Welcome participants, support information desks, and assist workshop logistics.",
+      skills: ["Communication", "Information desk"],
+      interests: ["Mental wellness", "Education"],
+      roles: [
+        { name: "Information desk", capacity: 3 },
+        { name: "Event logistics", capacity: 3 },
+      ],
+      shifts: [
+        {
+          id: "sh_3",
+          start: "2026-12-12T10:00",
+          end: "2026-12-12T14:00",
+          role: "Information desk",
+          location: "Mysuru Youth Centre",
+        },
+      ],
+      status: "Active",
+    },
+    {
+      id: "evt_senior",
+      title: "Senior Citizen Outreach Program",
+      category: "Outreach",
+      city: "Bengaluru",
+      date: "2026-12-17",
+      description:
+        "Coordinate check-in and help visitors navigate an accessible outreach day.",
+      skills: ["Empathy", "Crowd coordination"],
+      interests: ["Senior care", "Community health"],
+      roles: [
+        { name: "Visitor support", capacity: 5 },
+        { name: "Event registration", capacity: 3 },
+      ],
+      shifts: [
+        {
+          id: "sh_4",
+          start: "2026-12-17T09:30",
+          end: "2026-12-17T13:30",
+          role: "Visitor support",
+          location: "Jayanagar Senior Centre",
+        },
+      ],
+      status: "Active",
+    },
+    {
+      id: "evt_rural",
+      title: "Rural Healthcare Awareness Campaign",
+      category: "Awareness",
+      city: "Ramanagara",
+      date: "2026-12-21",
+      description:
+        "Support outreach logistics, basic registration, and awareness material distribution.",
+      skills: ["Logistics", "Communication"],
+      interests: ["Rural outreach", "Public health"],
+      roles: [
+        { name: "Logistics support", capacity: 6 },
+        { name: "Awareness support", capacity: 8 },
+      ],
+      shifts: [
+        {
+          id: "sh_5",
+          start: "2026-12-21T08:00",
+          end: "2026-12-21T16:00",
+          role: "Logistics support",
+          location: "Ramanagara Panchayat Hall",
+        },
+      ],
+      status: "Active",
+    },
+    {
+      id: "evt_women",
+      title: "Women's Health Awareness Event",
+      category: "Education",
+      city: "Bengaluru",
+      date: "2026-12-27",
+      description:
+        "Staff an information desk and coordinate attendee movement for community sessions.",
+      skills: ["Information desk", "Communication"],
+      interests: ["Women’s health", "Education"],
+      roles: [
+        { name: "Information desk", capacity: 4 },
+        { name: "Crowd coordination", capacity: 4 },
+      ],
+      shifts: [
+        {
+          id: "sh_6",
+          start: "2026-12-27T10:00",
+          end: "2026-12-27T15:00",
+          role: "Information desk",
+          location: "Koramangala Forum Hall",
+        },
+      ],
+      status: "Active",
+    },
   ];
-  const db = {users:[{id:'u_demo', name:'Aarav Mehta', email:'volunteer@med2sync.demo', role:'volunteer'}, {id:'u_admin', name:'Priya Shah', email:'admin@med2sync.demo', role:'admin'}], profiles:[{userId:'u_demo', phone:'9000000000', city:'Bengaluru', bio:'Student volunteer interested in clear, welcoming community events.', skills:['Communication','Registration','Documentation'], interests:['Community health','Education','Public health'], experience:'I have helped run college registration desks and documentation teams.', preferredRoles:['Registration desk','Documentation'], availability:['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'], verified:true}], events, applications:[{id:'app_done', userId:'u_demo', eventId:'evt_health', role:'Registration desk', status:'Approved', created:'2026-10-20'}, {id:'app_pending', userId:'u_demo', eventId:'evt_blood', role:'Crowd coordination', status:'Pending', created:'2026-11-10'}], assignments:[{id:'as_done', userId:'u_demo', eventId:'evt_health', shiftId:'sh_1', status:'Completed', attendance:'Present', hours:5}], logs:[{id:'l1', message:'Demo data initialized — use Reset Demo Data to restore it.',time:'Today'}], session:null};
+  const db = {
+    users: [
+      {
+        id: "u_demo",
+        name: "Aarav Mehta",
+        email: "volunteer@med2sync.demo",
+        role: "volunteer",
+      },
+      {
+        id: "u_admin",
+        name: "Priya Shah",
+        email: "admin@med2sync.demo",
+        role: "admin",
+      },
+    ],
+    profiles: [
+      {
+        userId: "u_demo",
+        phone: "9000000000",
+        city: "Bengaluru",
+        bio: "Student volunteer interested in clear, welcoming community events.",
+        skills: ["Communication", "Registration", "Documentation"],
+        interests: ["Community health", "Education", "Public health"],
+        experience:
+          "I have helped run college registration desks and documentation teams.",
+        preferredRoles: ["Registration desk", "Documentation"],
+        availability: [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+          "Sunday",
+        ],
+        verified: true,
+      },
+    ],
+    events,
+    applications: [
+      {
+        id: "app_done",
+        userId: "u_demo",
+        eventId: "evt_health",
+        role: "Registration desk",
+        status: "Approved",
+        created: "2026-10-20",
+      },
+      {
+        id: "app_pending",
+        userId: "u_demo",
+        eventId: "evt_blood",
+        role: "Crowd coordination",
+        status: "Pending",
+        created: "2026-11-10",
+      },
+    ],
+    assignments: [
+      {
+        id: "as_done",
+        userId: "u_demo",
+        eventId: "evt_health",
+        shiftId: "sh_1",
+        status: "Completed",
+        attendance: "Present",
+        hours: 5,
+      },
+    ],
+    logs: [
+      {
+        id: "l1",
+        message: "Demo data initialized — use Reset Demo Data to restore it.",
+        time: "Today",
+      },
+    ],
+    session: null,
+  };
   save(db);
 }
 
-function brand(compact=false) { return `<a class="brand" href="#home" aria-label="MED2SYNC home"><span class="brand-copy"><b>MED<span>2</span>SYNC</b>${compact?'':'<small>Medical volunteer coordination</small>'}</span></a>`; }
-function publicNav() { return `<header class="topbar">${brand()}<button class="mobile-toggle" data-action="toggle-menu" aria-label="Toggle navigation">☰</button><nav id="public-nav"><a href="#home">Home</a><a href="#about">About</a><a href="#events">Explore events</a><a href="#how">How it works</a></nav><div class="nav-actions"><a class="quiet-link" href="#login">Log in</a><a class="button small" href="#register">Get started</a></div></header>`; }
-function loggedLayout(content, active) { const user = currentUser(); const links = user.role === 'admin' ? [['admin','Command centre'],['events','Events'],['admin-volunteers','Volunteers'],['admin-reports','Reports']] : [['dashboard','Overview'],['events','Explore events'],['applications','My applications'],['profile','My profile'],['impact','My impact']]; return `<div class="shell"><aside class="side"><div>${brand(true)}</div><nav>${links.map(([route,label]) => `<a class="${active===route?'active':''}" href="#${route}">${label}</a>`).join('')}</nav><div class="side-bottom"><span class="demo-label">DEMO SESSION</span><strong>${escapeHtml(user.name)}</strong><small>${user.role === 'admin' ? 'Administrator' : 'Volunteer'}</small><button class="text-button" data-action="logout">Sign out</button></div></aside><section class="workspace"><header class="workspace-head"><button class="side-toggle" data-action="toggle-side">☰</button><div><small>MED2SYNC / ${user.role === 'admin'?'ADMIN':'VOLUNTEER'}</small><h1>${escapeHtml(pageTitle(active))}</h1></div><button class="outline-button" data-action="reset">Reset demo data</button></header>${content}</section></div>`; }
-function pageTitle(route) { return ({dashboard:'Your volunteer space',events:'Explore opportunities',applications:'Applications & shifts',profile:'Profile & availability',impact:'Personal impact',admin:'Command centre','admin-volunteers':'Volunteer directory','admin-reports':'Participation reports'})[route] || 'MED2SYNC'; }
-function requireSession() { if (!currentUser()) { location.hash = '#login'; return false; } return true; }
+function brand(compact = false) {
+  return `<a class="brand" href="#home" aria-label="MED2SYNC home"><span class="brand-copy"><b>MED<span>2</span>SYNC</b>${compact ? "" : "<small>Medical volunteer coordination</small>"}</span></a>`;
+}
+function publicNav() {
+  return `<header class="topbar">${brand()}<button class="mobile-toggle" data-action="toggle-menu" aria-label="Toggle navigation">☰</button><nav id="public-nav"><a href="#home">Home</a><a href="#about">About</a><a href="#events">Explore events</a><a href="#how">How it works</a></nav><div class="nav-actions"><a class="quiet-link" href="#login">Log in</a><a class="button small" href="#register">Get started</a></div></header>`;
+}
+function loggedLayout(content, active) {
+  const user = currentUser();
+  const links =
+    user.role === "admin"
+      ? [
+          ["admin", "Command centre"],
+          ["events", "Events"],
+          ["admin-volunteers", "Volunteers"],
+          ["admin-reports", "Reports"],
+        ]
+      : [
+          ["dashboard", "Overview"],
+          ["events", "Explore events"],
+          ["applications", "My applications"],
+          ["profile", "My profile"],
+          ["impact", "My impact"],
+        ];
+  return `<div class="shell"><aside class="side"><div>${brand(true)}</div><nav>${links.map(([route, label]) => `<a class="${active === route ? "active" : ""}" href="#${route}">${label}</a>`).join("")}</nav><div class="side-bottom"><span class="demo-label">DEMO SESSION</span><strong>${escapeHtml(user.name)}</strong><small>${user.role === "admin" ? "Administrator" : "Volunteer"}</small><button class="text-button" data-action="logout">Sign out</button></div></aside><section class="workspace"><header class="workspace-head"><button class="side-toggle" data-action="toggle-side">☰</button><div><small>MED2SYNC / ${user.role === "admin" ? "ADMIN" : "VOLUNTEER"}</small><h1>${escapeHtml(pageTitle(active))}</h1></div><button class="outline-button" data-action="reset">Reset demo data</button></header>${content}</section></div>`;
+}
+function pageTitle(route) {
+  return (
+    {
+      dashboard: "Your volunteer space",
+      events: "Explore opportunities",
+      applications: "Applications & shifts",
+      profile: "Profile & availability",
+      impact: "Personal impact",
+      admin: "Command centre",
+      "admin-volunteers": "Volunteer directory",
+      "admin-reports": "Participation reports",
+    }[route] || "MED2SYNC"
+  );
+}
+function requireSession() {
+  if (!currentUser()) {
+    location.hash = "#login";
+    return false;
+  }
+  return true;
+}
 
-function landing() { app.innerHTML = `${publicNav()}<section class="hero" id="home"><div class="hero-copy"><p class="eyebrow">NON-CLINICAL HEALTHCARE VOLUNTEERING</p><h1>Better coordination.<br><em>Greater community impact.</em></h1><p class="lead">MED2SYNC gives volunteers and organizers one clear place to discover opportunities, coordinate shifts, and document meaningful service.</p><div class="hero-actions"><a href="#register" class="button">Join as a volunteer</a><a href="#events" class="arrow-link">Explore opportunities →</a></div><p class="micro">A frontend-only academic prototype. No patient records or real credentials are collected.</p></div><div class="hero-panel"><div class="calendar-card"><p class="eyebrow">UP NEXT</p><h3>Community Health Awareness Camp</h3><p>03 Dec · Indiranagar Community Hall</p><div class="shift-line"><span>Registration desk</span><b>4 spots</b></div><div class="shift-line"><span>Awareness support</span><b>6 spots</b></div></div><div class="route-card"><span class="route-dot"></span><span>Volunteer profile</span><i></i><span class="route-dot mint"></span><span>Matched opportunity</span><i></i><span class="route-dot dark"></span><span>Verified impact</span></div></div></section><section class="editorial" id="about"><div><p class="eyebrow">BUILT FOR THE WORK BETWEEN THE CLINICAL WORK</p><h2>Every good outreach event needs a calm, prepared team behind it.</h2></div><p>From registration and logistics to information support and documentation, MED2SYNC keeps non-clinical volunteer work visible, organized, and accountable.</p></section><section class="feature-band" id="how"><article><span>01</span><h3>Tell us what fits</h3><p>Skills, interests, preferred roles, and availability become a clear volunteer profile.</p></article><article><span>02</span><h3>Find the right shift</h3><p>An explainable rule-based score highlights opportunities that match your profile.</p></article><article><span>03</span><h3>Make time count</h3><p>Organizers confirm attendance; verified hours and impact update automatically.</p></article></section><section class="landing-events"><div><p class="eyebrow">OPPORTUNITIES</p><h2>Purposeful roles. Clear expectations.</h2></div><a class="arrow-link" href="#events">See all opportunities →</a><div class="landing-event-list"><div><b>03 DEC</b><span>Community Health Awareness Camp</span><small>Bengaluru · Registration & awareness support</small></div><div><b>08 DEC</b><span>Blood Donation Drive</span><small>Bengaluru · Crowd coordination & documentation</small></div><div><b>12 DEC</b><span>Mental Health Awareness Workshop</span><small>Mysuru · Information desk & event logistics</small></div></div></section><section class="cta"><div><p class="eyebrow">READY TO CONTRIBUTE?</p><h2>Coordination that makes room for care.</h2></div><a href="#register" class="button light">Create your volunteer profile</a></section><footer><div>${brand(true)}</div><p>MED2SYNC · CSE326 academic prototype</p><p>Connect. Coordinate. Care.</p></footer>`; }
+function landing() {
+  app.innerHTML = `${publicNav()}<section class="hero" id="home"><div class="hero-copy"><p class="eyebrow">NON-CLINICAL HEALTHCARE VOLUNTEERING</p><h1>Better coordination.<br><em>Greater community impact.</em></h1><p class="lead">MED2SYNC gives volunteers and organizers one clear place to discover opportunities, coordinate shifts, and document meaningful service.</p><div class="hero-actions"><a href="#register" class="button">Join as a volunteer</a><a href="#events" class="arrow-link">Explore opportunities →</a></div><p class="micro">A frontend-only academic prototype. No patient records or real credentials are collected.</p></div><div class="hero-panel"><div class="calendar-card"><p class="eyebrow">UP NEXT</p><h3>Community Health Awareness Camp</h3><p>03 Dec · Indiranagar Community Hall</p><div class="shift-line"><span>Registration desk</span><b>4 spots</b></div><div class="shift-line"><span>Awareness support</span><b>6 spots</b></div></div><div class="route-card"><span class="route-dot"></span><span>Volunteer profile</span><i></i><span class="route-dot mint"></span><span>Matched opportunity</span><i></i><span class="route-dot dark"></span><span>Verified impact</span></div></div></section><section class="editorial" id="about"><div><p class="eyebrow">BUILT FOR THE WORK BETWEEN THE CLINICAL WORK</p><h2>Every good outreach event needs a calm, prepared team behind it.</h2></div><p>From registration and logistics to information support and documentation, MED2SYNC keeps non-clinical volunteer work visible, organized, and accountable.</p></section><section class="feature-band" id="how"><article><span>01</span><h3>Tell us what fits</h3><p>Skills, interests, preferred roles, and availability become a clear volunteer profile.</p></article><article><span>02</span><h3>Find the right shift</h3><p>An explainable rule-based score highlights opportunities that match your profile.</p></article><article><span>03</span><h3>Make time count</h3><p>Organizers confirm attendance; verified hours and impact update automatically.</p></article></section><section class="landing-events"><div><p class="eyebrow">OPPORTUNITIES</p><h2>Purposeful roles. Clear expectations.</h2></div><a class="arrow-link" href="#events">See all opportunities →</a><div class="landing-event-list"><div><b>03 DEC</b><span>Community Health Awareness Camp</span><small>Bengaluru · Registration & awareness support</small></div><div><b>08 DEC</b><span>Blood Donation Drive</span><small>Bengaluru · Crowd coordination & documentation</small></div><div><b>12 DEC</b><span>Mental Health Awareness Workshop</span><small>Mysuru · Information desk & event logistics</small></div></div></section><section class="cta"><div><p class="eyebrow">READY TO CONTRIBUTE?</p><h2>Coordination that makes room for care.</h2></div><a href="#register" class="button light">Create your volunteer profile</a></section><footer><div>${brand(true)}</div><p>MED2SYNC · CSE326 academic prototype</p><p>Connect. Coordinate. Care.</p></footer>`;
+}
 
-function authPage(mode) { const login = mode === 'login'; app.innerHTML = `<div class="auth-wrap"><div class="auth-art"><a href="#home">← Back to MED2SYNC</a><div><p class="eyebrow">MEDICAL VOLUNTEER COORDINATION</p><h1>A better way to show up for your community.</h1><p>Manage non-clinical volunteering in one calm, coordinated space.</p></div><p class="notice">Demonstration only — never enter a real password or sensitive information.</p></div><section class="auth-card">${brand()}<div class="auth-title"><p class="eyebrow">${login?'WELCOME BACK':'GET STARTED'}</p><h2>${login?'Sign in to your demo workspace':'Create a demonstration profile'}</h2><p>${login?'Use a sample account or continue with your registered demo details.':'Your details are stored only in this browser.'}</p></div><form id="auth-form" data-mode="${mode}">${!login?'<label>Full name<input name="name" required maxlength="60" placeholder="Your name"></label>':''}<label>Email address<input name="email" type="email" required placeholder="name@example.com"></label><label>Password <span class="hint">(demo only)</span><div class="password-wrap"><input name="password" type="password" required minlength="4" placeholder="Any 4+ characters"><button type="button" data-action="show-password" aria-label="Show password">Show</button></div></label><button class="button wide" type="submit">${login?'Sign in':'Create demo account'}</button></form>${login?'<div class="demo-box"><strong>Sample access</strong><button data-action="demo-login" data-role="volunteer">Volunteer · Aarav Mehta</button><button data-action="demo-login" data-role="admin">Administrator · Priya Shah</button></div>':''}<p class="auth-switch">${login?'New here? <a href="#register">Create a demo profile</a>':'Already have a demo profile? <a href="#login">Sign in</a>'}</p></section></div>`; }
+function authPage(mode) {
+  const login = mode === "login";
+  app.innerHTML = `<div class="auth-wrap"><div class="auth-art"><a href="#home">← Back to MED2SYNC</a><div><p class="eyebrow">MEDICAL VOLUNTEER COORDINATION</p><h1>A better way to show up for your community.</h1><p>Manage non-clinical volunteering in one calm, coordinated space.</p></div><p class="notice">Demonstration only — never enter a real password or sensitive information.</p></div><section class="auth-card">${brand()}<div class="auth-title"><p class="eyebrow">${login ? "WELCOME BACK" : "GET STARTED"}</p><h2>${login ? "Sign in to your demo workspace" : "Create a demonstration profile"}</h2><p>${login ? "Use a sample account or continue with your registered demo details." : "Your details are stored only in this browser."}</p></div><form id="auth-form" data-mode="${mode}">${!login ? '<label>Full name<input name="name" required maxlength="60" placeholder="Your name"></label>' : ""}<label>Email address<input name="email" type="email" required placeholder="name@example.com"></label><label>Password <span class="hint">(demo only)</span><div class="password-wrap"><input name="password" type="password" required minlength="4" placeholder="Any 4+ characters"><button type="button" data-action="show-password" aria-label="Show password">Show</button></div></label><button class="button wide" type="submit">${login ? "Sign in" : "Create demo account"}</button></form>${login ? '<div class="demo-box"><strong>Sample access</strong><button data-action="demo-login" data-role="volunteer">Volunteer · Aarav Mehta</button><button data-action="demo-login" data-role="admin">Administrator · Priya Shah</button></div>' : ""}<p class="auth-switch">${login ? 'New here? <a href="#register">Create a demo profile</a>' : 'Already have a demo profile? <a href="#login">Sign in</a>'}</p></section></div>`;
+}
 
-function stats(db, userId) { const records = db.assignments.filter(a=>a.userId===userId && a.status==='Completed' && a.attendance==='Present'); const hours = records.reduce((n,a)=>n+Number(a.hours||0),0); const attended = db.assignments.filter(a=>a.userId===userId && ['Present','Absent'].includes(a.attendance)); return {hours, events:new Set(records.map(a=>a.eventId)).size, attendance:attended.length?Math.round(records.length/attended.length*100):0, completed:records}; }
-function scoreEvent(profile, event) { const skill = event.skills.length ? event.skills.filter(x=>profile.skills.includes(x)).length / event.skills.length * 100 : 0; const interest = event.interests.length ? event.interests.filter(x=>profile.interests.includes(x)).length / event.interests.length * 100 : 0; const days = event.shifts.map(s=>new Date(s.start).toLocaleDateString('en-US',{weekday:'long'})); const availability = days.some(d=>profile.availability.includes(d)) ? 100 : 0; const experience = profile.experience.trim().length > 20 ? 85 : 30; return Math.round(skill*.4 + availability*.3 + interest*.2 + experience*.1); }
-function recommendationReason(profile,event) { const matched = event.skills.filter(x=>profile.skills.includes(x)); return matched.length ? `Matches your ${matched.join(' and ')} skills${profile.availability.includes(new Date(event.shifts[0].start).toLocaleDateString('en-US',{weekday:'long'})) ? ' and stated availability' : ''}.` : 'Aligned with your selected interests and availability.'; }
+function stats(db, userId) {
+  const records = db.assignments.filter(
+    (a) =>
+      a.userId === userId &&
+      a.status === "Completed" &&
+      a.attendance === "Present",
+  );
+  const hours = records.reduce((n, a) => n + Number(a.hours || 0), 0);
+  const attended = db.assignments.filter(
+    (a) => a.userId === userId && ["Present", "Absent"].includes(a.attendance),
+  );
+  return {
+    hours,
+    events: new Set(records.map((a) => a.eventId)).size,
+    attendance: attended.length
+      ? Math.round((records.length / attended.length) * 100)
+      : 0,
+    completed: records,
+  };
+}
+function scoreEvent(profile, event) {
+  const skill = event.skills.length
+    ? (event.skills.filter((x) => profile.skills.includes(x)).length /
+        event.skills.length) *
+      100
+    : 0;
+  const interest = event.interests.length
+    ? (event.interests.filter((x) => profile.interests.includes(x)).length /
+        event.interests.length) *
+      100
+    : 0;
+  const days = event.shifts.map((s) =>
+    new Date(s.start).toLocaleDateString("en-US", { weekday: "long" }),
+  );
+  const availability = days.some((d) => profile.availability.includes(d))
+    ? 100
+    : 0;
+  const experience = profile.experience.trim().length > 20 ? 85 : 30;
+  return Math.round(
+    skill * 0.4 + availability * 0.3 + interest * 0.2 + experience * 0.1,
+  );
+}
+function recommendationReason(profile, event) {
+  const matched = event.skills.filter((x) => profile.skills.includes(x));
+  return matched.length
+    ? `Matches your ${matched.join(" and ")} skills${profile.availability.includes(new Date(event.shifts[0].start).toLocaleDateString("en-US", { weekday: "long" })) ? " and stated availability" : ""}.`
+    : "Aligned with your selected interests and availability.";
+}
 
-function dashboard() { if (!requireSession()) return; const db = read(), user = currentUser(); const profile = getProfile(db,user.id), s=stats(db,user.id); const assignments=db.assignments.filter(a=>a.userId===user.id && a.status==='Scheduled'); const apps=db.applications.filter(a=>a.userId===user.id); const recommendations=db.events.filter(e=>e.status==='Active').map(e=>({e,score:scoreEvent(profile,e)})).filter(x=>x.score>=45).sort((a,b)=>b.score-a.score).slice(0,3); app.innerHTML=loggedLayout(`<div class="dashboard-grid"><section class="welcome-card"><p class="eyebrow">VOLUNTEER OVERVIEW</p><h2>Good ${new Date().getHours()<12?'morning':'afternoon'}, ${escapeHtml(user.name.split(' ')[0])}.</h2><p>Your profile helps organizers place you in roles where you can make a confident contribution.</p><div class="verification">${profile.verified?'✓ Profile verified':'! Profile awaiting verification'}<a href="#profile">Review profile →</a></div></section><section class="metric"><span>Verified hours</span><b>${s.hours}</b><small>from confirmed attendance</small></section><section class="metric"><span>Completed events</span><b>${s.events}</b><small>service activities recorded</small></section><section class="metric"><span>Pending applications</span><b>${apps.filter(a=>a.status==='Pending').length}</b><small>awaiting organizer review</small></section><section class="section-card span-2"><div class="card-title"><div><p class="eyebrow">UPCOMING SHIFTS</p><h3>Your next commitments</h3></div><a href="#applications">View all →</a></div>${assignments.length?assignments.map(a=>shiftItem(db,a)).join(''):'<div class="empty">No shifts scheduled yet. <a href="#events">Explore opportunities</a>.</div>'}</section><section class="section-card"><div class="card-title"><div><p class="eyebrow">QUICK ACTIONS</p><h3>Keep moving</h3></div></div><a class="action-row" href="#events">Discover an event <b>→</b></a><a class="action-row" href="#profile">Update availability <b>→</b></a><a class="action-row" href="#impact">View your impact <b>→</b></a></section><section class="section-card span-3"><div class="card-title"><div><p class="eyebrow">RECOMMENDED FOR YOU</p><h3>Based on your profile</h3></div><a href="#events">Explore all →</a></div><div class="recommendations">${recommendations.map(({e,score})=>`<article><div><span class="score">${score}% fit</span><small>${escapeHtml(e.category)} · ${escapeHtml(e.city)}</small></div><h4>${escapeHtml(e.title)}</h4><p>${escapeHtml(recommendationReason(profile,e))}</p><a href="#events?event=${e.id}">See opportunity →</a></article>`).join('')||'<div class="empty">Complete your profile to unlock recommendations.</div>'}</div></section></div>`,'dashboard'); }
-function shiftItem(db,a) { const ev=eventById(db,a.eventId), shift=ev.shifts.find(s=>s.id===a.shiftId); return `<div class="shift-item"><b>${new Date(shift.start).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</b><div><strong>${escapeHtml(ev.title)}</strong><small>${escapeHtml(shift.role)} · ${escapeHtml(shift.location)}</small></div>${status(a.status)}</div>`; }
+function dashboard() {
+  if (!requireSession()) return;
+  const db = read(),
+    user = currentUser();
+  const profile = getProfile(db, user.id),
+    s = stats(db, user.id);
+  const assignments = db.assignments.filter(
+    (a) => a.userId === user.id && a.status === "Scheduled",
+  );
+  const apps = db.applications.filter((a) => a.userId === user.id);
+  const recommendations = db.events
+    .filter((e) => e.status === "Active")
+    .map((e) => ({ e, score: scoreEvent(profile, e) }))
+    .filter((x) => x.score >= 45)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+  app.innerHTML = loggedLayout(
+    `<div class="dashboard-grid"><section class="welcome-card"><p class="eyebrow">VOLUNTEER OVERVIEW</p><h2>Good ${new Date().getHours() < 12 ? "morning" : "afternoon"}, ${escapeHtml(user.name.split(" ")[0])}.</h2><p>Your profile helps organizers place you in roles where you can make a confident contribution.</p><div class="verification">${profile.verified ? "✓ Profile verified" : "! Profile awaiting verification"}<a href="#profile">Review profile →</a></div></section><section class="metric"><span>Verified hours</span><b>${s.hours}</b><small>from confirmed attendance</small></section><section class="metric"><span>Completed events</span><b>${s.events}</b><small>service activities recorded</small></section><section class="metric"><span>Pending applications</span><b>${apps.filter((a) => a.status === "Pending").length}</b><small>awaiting organizer review</small></section><section class="section-card span-2"><div class="card-title"><div><p class="eyebrow">UPCOMING SHIFTS</p><h3>Your next commitments</h3></div><a href="#applications">View all →</a></div>${assignments.length ? assignments.map((a) => shiftItem(db, a)).join("") : '<div class="empty">No shifts scheduled yet. <a href="#events">Explore opportunities</a>.</div>'}</section><section class="section-card"><div class="card-title"><div><p class="eyebrow">QUICK ACTIONS</p><h3>Keep moving</h3></div></div><a class="action-row" href="#events">Discover an event <b>→</b></a><a class="action-row" href="#profile">Update availability <b>→</b></a><a class="action-row" href="#impact">View your impact <b>→</b></a></section><section class="section-card span-3"><div class="card-title"><div><p class="eyebrow">RECOMMENDED FOR YOU</p><h3>Based on your profile</h3></div><a href="#events">Explore all →</a></div><div class="recommendations">${recommendations.map(({ e, score }) => `<article><div><span class="score">${score}% fit</span><small>${escapeHtml(e.category)} · ${escapeHtml(e.city)}</small></div><h4>${escapeHtml(e.title)}</h4><p>${escapeHtml(recommendationReason(profile, e))}</p><a href="#events?event=${e.id}">See opportunity →</a></article>`).join("") || '<div class="empty">Complete your profile to unlock recommendations.</div>'}</div></section></div>`,
+    "dashboard",
+  );
+}
+function shiftItem(db, a) {
+  const ev = eventById(db, a.eventId),
+    shift = ev.shifts.find((s) => s.id === a.shiftId);
+  return `<div class="shift-item"><b>${new Date(shift.start).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</b><div><strong>${escapeHtml(ev.title)}</strong><small>${escapeHtml(shift.role)} · ${escapeHtml(shift.location)}</small></div>${status(a.status)}</div>`;
+}
 
-function eventsPage() { const db=read(), user=currentUser(); const profile=user?getProfile(db,user.id):null; const params=new URLSearchParams(location.hash.split('?')[1]||''); const selected=params.get('event'); const listing=db.events.filter(e=>e.status==='Active'); app.innerHTML = user?loggedLayout(`<div class="filters"><label>Search<input id="event-search" placeholder="Search opportunities"></label><label>Category<select id="category-filter"><option value="">All categories</option>${[...new Set(listing.map(e=>e.category))].map(x=>`<option>${escapeHtml(x)}</option>`).join('')}</select></label><label>Location<select id="city-filter"><option value="">All locations</option>${[...new Set(listing.map(e=>e.city))].map(x=>`<option>${escapeHtml(x)}</option>`).join('')}</select></label></div><div class="event-layout"><div id="event-list" class="event-list">${listing.map(e=>eventCard(e,profile,selected===e.id)).join('')}</div><aside id="event-detail" class="event-detail">${selected?eventDetail(db,selected,user):'<div class="empty">Select an opportunity to see roles, shifts, and eligibility.</div>'}</aside></div>`,'events'): `${publicNav()}<section class="public-events"><p class="eyebrow">OPPORTUNITIES</p><h1>Find a role that helps the whole event run well.</h1><div class="event-list">${listing.map(e=>eventCard(e,null,selected===e.id)).join('')}</div></section>`; }
-function eventCard(e, profile, selected) { const score=profile?scoreEvent(profile,e):null; return `<article class="event-card ${selected?'selected':''}"><div class="event-card-top"><span>${escapeHtml(e.category)}</span>${score!==null?`<b>${score}% fit</b>`:''}</div><h3>${escapeHtml(e.title)}</h3><p>${escapeHtml(e.description)}</p><div class="event-meta"><span>${formatDate(e.date)}</span><span>${escapeHtml(e.city)}</span></div><div class="card-footer"><small>${e.roles.reduce((n,r)=>n+r.capacity,0)} volunteer places</small><a href="#events?event=${e.id}">Details →</a></div></article>`; }
-function eventDetail(db,id,user) { const e=eventById(db,id); if(!e)return ''; const existing=db.applications.find(a=>a.userId===user.id&&a.eventId===id); return `<p class="eyebrow">${escapeHtml(e.category)} · ${escapeHtml(e.city)}</p><h2>${escapeHtml(e.title)}</h2><p>${escapeHtml(e.description)}</p><hr><h4>Roles needed</h4><ul class="role-list">${e.roles.map(r=>`<li><span>${escapeHtml(r.name)}</span><b>${r.capacity} places</b></li>`).join('')}</ul><h4>Available shift</h4>${e.shifts.map(s=>`<div class="shift-box"><b>${new Date(s.start).toLocaleString(undefined,{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</b><small>${escapeHtml(s.role)} · ${escapeHtml(s.location)}</small></div>`).join('')}<form id="apply-form" data-event="${e.id}"><label>Preferred role<select name="role">${e.roles.map(r=>`<option>${escapeHtml(r.name)}</option>`).join('')}</select></label>${existing?`<p class="form-note">You have already applied: ${status(existing.status)}</p>`:'<button class="button wide" type="submit">Apply for this opportunity</button>'}</form>`; }
+function eventsPage() {
+  const db = read(),
+    user = currentUser();
+  const profile = user ? getProfile(db, user.id) : null;
+  const params = new URLSearchParams(location.hash.split("?")[1] || "");
+  const selected = params.get("event");
+  const listing = db.events.filter((e) => e.status === "Active");
+  app.innerHTML = user
+    ? loggedLayout(
+        `<div class="filters"><label>Search<input id="event-search" placeholder="Search opportunities"></label><label>Category<select id="category-filter"><option value="">All categories</option>${[...new Set(listing.map((e) => e.category))].map((x) => `<option>${escapeHtml(x)}</option>`).join("")}</select></label><label>Location<select id="city-filter"><option value="">All locations</option>${[...new Set(listing.map((e) => e.city))].map((x) => `<option>${escapeHtml(x)}</option>`).join("")}</select></label></div><div class="event-layout"><div id="event-list" class="event-list">${listing.map((e) => eventCard(e, profile, selected === e.id)).join("")}</div><aside id="event-detail" class="event-detail">${selected ? eventDetail(db, selected, user) : '<div class="empty">Select an opportunity to see roles, shifts, and eligibility.</div>'}</aside></div>`,
+        "events",
+      )
+    : `${publicNav()}<section class="public-events"><p class="eyebrow">OPPORTUNITIES</p><h1>Find a role that helps the whole event run well.</h1><div class="event-list">${listing.map((e) => eventCard(e, null, selected === e.id)).join("")}</div></section>`;
+}
+function eventCard(e, profile, selected) {
+  const score = profile ? scoreEvent(profile, e) : null;
+  return `<article class="event-card ${selected ? "selected" : ""}"><div class="event-card-top"><span>${escapeHtml(e.category)}</span>${score !== null ? `<b>${score}% fit</b>` : ""}</div><h3>${escapeHtml(e.title)}</h3><p>${escapeHtml(e.description)}</p><div class="event-meta"><span>${formatDate(e.date)}</span><span>${escapeHtml(e.city)}</span></div><div class="card-footer"><small>${e.roles.reduce((n, r) => n + r.capacity, 0)} volunteer places</small><a href="#events?event=${e.id}">Details →</a></div></article>`;
+}
+function eventDetail(db, id, user) {
+  const e = eventById(db, id);
+  if (!e) return "";
+  const existing = db.applications.find(
+    (a) => a.userId === user.id && a.eventId === id,
+  );
+  return `<p class="eyebrow">${escapeHtml(e.category)} · ${escapeHtml(e.city)}</p><h2>${escapeHtml(e.title)}</h2><p>${escapeHtml(e.description)}</p><hr><h4>Roles needed</h4><ul class="role-list">${e.roles.map((r) => `<li><span>${escapeHtml(r.name)}</span><b>${r.capacity} places</b></li>`).join("")}</ul><h4>Available shift</h4>${e.shifts.map((s) => `<div class="shift-box"><b>${new Date(s.start).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</b><small>${escapeHtml(s.role)} · ${escapeHtml(s.location)}</small></div>`).join("")}<form id="apply-form" data-event="${e.id}"><label>Preferred role<select name="role">${e.roles.map((r) => `<option>${escapeHtml(r.name)}</option>`).join("")}</select></label>${existing ? `<p class="form-note">You have already applied: ${status(existing.status)}</p>` : '<button class="button wide" type="submit">Apply for this opportunity</button>'}</form>`;
+}
 
-function profilePage() { if(!requireSession())return; const db=read(),u=currentUser(),p=getProfile(db,u.id); const days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']; app.innerHTML=loggedLayout(`<form id="profile-form" class="profile-form"><section class="section-card"><div class="card-title"><div><p class="eyebrow">PROFILE</p><h3>Your volunteer profile</h3></div>${p.verified?status('Verified'):status('Unverified')}</div><div class="form-grid"><label>Full name<input name="name" value="${escapeHtml(u.name)}" required maxlength="60"></label><label>City<input name="city" value="${escapeHtml(p.city)}" required></label><label>Demo contact<input name="phone" value="${escapeHtml(p.phone)}" inputmode="tel"></label><label>Skills <span class="hint">comma-separated</span><input name="skills" value="${escapeHtml(p.skills.join(', '))}" required></label><label>Areas of interest <span class="hint">comma-separated</span><input name="interests" value="${escapeHtml(p.interests.join(', '))}" required></label><label>Preferred roles <span class="hint">comma-separated</span><input name="roles" value="${escapeHtml(p.preferredRoles.join(', '))}"></label><label class="full">Short biography<textarea name="bio" rows="3" maxlength="300">${escapeHtml(p.bio)}</textarea></label><label class="full">Previous volunteering experience<textarea name="experience" rows="3" maxlength="500">${escapeHtml(p.experience)}</textarea></label></div></section><section class="section-card"><p class="eyebrow">AVAILABILITY</p><h3>Days you are usually available</h3><p class="muted">This is used for matching and shift assignment checks. It does not record an exact address or other sensitive data.</p><div class="days">${days.map(d=>`<label><input type="checkbox" name="days" value="${d}" ${p.availability.includes(d)?'checked':''}><span>${d.slice(0,3)}</span></label>`).join('')}</div></section><button class="button" type="submit">Save profile and availability</button></form>`,'profile'); }
+function profilePage() {
+  if (!requireSession()) return;
+  const db = read(),
+    u = currentUser(),
+    p = getProfile(db, u.id);
+  const days = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
+  app.innerHTML = loggedLayout(
+    `<form id="profile-form" class="profile-form"><section class="section-card"><div class="card-title"><div><p class="eyebrow">PROFILE</p><h3>Your volunteer profile</h3></div>${p.verified ? status("Verified") : status("Unverified")}</div><div class="form-grid"><label>Full name<input name="name" value="${escapeHtml(u.name)}" required maxlength="60"></label><label>City<input name="city" value="${escapeHtml(p.city)}" required></label><label>Demo contact<input name="phone" value="${escapeHtml(p.phone)}" inputmode="tel"></label><label>Skills <span class="hint">comma-separated</span><input name="skills" value="${escapeHtml(p.skills.join(", "))}" required></label><label>Areas of interest <span class="hint">comma-separated</span><input name="interests" value="${escapeHtml(p.interests.join(", "))}" required></label><label>Preferred roles <span class="hint">comma-separated</span><input name="roles" value="${escapeHtml(p.preferredRoles.join(", "))}"></label><label class="full">Short biography<textarea name="bio" rows="3" maxlength="300">${escapeHtml(p.bio)}</textarea></label><label class="full">Previous volunteering experience<textarea name="experience" rows="3" maxlength="500">${escapeHtml(p.experience)}</textarea></label></div></section><section class="section-card"><p class="eyebrow">AVAILABILITY</p><h3>Days you are usually available</h3><p class="muted">This is used for matching and shift assignment checks. It does not record an exact address or other sensitive data.</p><div class="days">${days.map((d) => `<label><input type="checkbox" name="days" value="${d}" ${p.availability.includes(d) ? "checked" : ""}><span>${d.slice(0, 3)}</span></label>`).join("")}</div></section><button class="button" type="submit">Save profile and availability</button></form>`,
+    "profile",
+  );
+}
 
-function applicationsPage() { if(!requireSession())return; const db=read(),u=currentUser(); const apps=db.applications.filter(a=>a.userId===u.id); const shifts=db.assignments.filter(a=>a.userId===u.id); app.innerHTML=loggedLayout(`<section class="section-card"><div class="card-title"><div><p class="eyebrow">APPLICATIONS</p><h3>Where you are in the process</h3></div><a href="#events">Find an event →</a></div><div class="table-wrap"><table><thead><tr><th>Event</th><th>Role</th><th>Applied</th><th>Status</th><th></th></tr></thead><tbody>${apps.map(a=>{const e=eventById(db,a.eventId);return `<tr><td><b>${escapeHtml(e.title)}</b></td><td>${escapeHtml(a.role)}</td><td>${formatDate(a.created)}</td><td>${status(a.status)}</td><td>${a.status==='Pending'?`<button class="link-button" data-action="cancel-app" data-id="${a.id}">Cancel</button>`:''}</td></tr>`}).join('')||'<tr><td colspan="5" class="empty">No applications yet.</td></tr>'}</tbody></table></div></section><section class="section-card"><div class="card-title"><div><p class="eyebrow">SHIFTS</p><h3>Assignments and attendance</h3></div></div><div class="table-wrap"><table><thead><tr><th>Event</th><th>When</th><th>Role</th><th>Attendance</th><th>Status</th></tr></thead><tbody>${shifts.map(a=>{const e=eventById(db,a.eventId),s=e.shifts.find(x=>x.id===a.shiftId);return `<tr><td><b>${escapeHtml(e.title)}</b><small>${escapeHtml(s.location)}</small></td><td>${new Date(s.start).toLocaleString()}</td><td>${escapeHtml(s.role)}</td><td>${a.attendance?status(a.attendance):'—'}</td><td>${status(a.status)}</td></tr>`}).join('')||'<tr><td colspan="5" class="empty">Approved applications will receive shifts here.</td></tr>'}</tbody></table></div></section>`,'applications'); }
+function applicationsPage() {
+  if (!requireSession()) return;
+  const db = read(),
+    u = currentUser();
+  const apps = db.applications.filter((a) => a.userId === u.id);
+  const shifts = db.assignments.filter((a) => a.userId === u.id);
+  app.innerHTML = loggedLayout(
+    `<section class="section-card"><div class="card-title"><div><p class="eyebrow">APPLICATIONS</p><h3>Where you are in the process</h3></div><a href="#events">Find an event →</a></div><div class="table-wrap"><table><thead><tr><th>Event</th><th>Role</th><th>Applied</th><th>Status</th><th></th></tr></thead><tbody>${
+      apps
+        .map((a) => {
+          const e = eventById(db, a.eventId);
+          return `<tr><td><b>${escapeHtml(e.title)}</b></td><td>${escapeHtml(a.role)}</td><td>${formatDate(a.created)}</td><td>${status(a.status)}</td><td>${a.status === "Pending" ? `<button class="link-button" data-action="cancel-app" data-id="${a.id}">Cancel</button>` : ""}</td></tr>`;
+        })
+        .join("") ||
+      '<tr><td colspan="5" class="empty">No applications yet.</td></tr>'
+    }</tbody></table></div></section><section class="section-card"><div class="card-title"><div><p class="eyebrow">SHIFTS</p><h3>Assignments and attendance</h3></div></div><div class="table-wrap"><table><thead><tr><th>Event</th><th>When</th><th>Role</th><th>Attendance</th><th>Status</th></tr></thead><tbody>${
+      shifts
+        .map((a) => {
+          const e = eventById(db, a.eventId),
+            s = e.shifts.find((x) => x.id === a.shiftId);
+          return `<tr><td><b>${escapeHtml(e.title)}</b><small>${escapeHtml(s.location)}</small></td><td>${new Date(s.start).toLocaleString()}</td><td>${escapeHtml(s.role)}</td><td>${a.attendance ? status(a.attendance) : "—"}</td><td>${status(a.status)}</td></tr>`;
+        })
+        .join("") ||
+      '<tr><td colspan="5" class="empty">Approved applications will receive shifts here.</td></tr>'
+    }</tbody></table></div></section>`,
+    "applications",
+  );
+}
 
-function impactPage() { if(!requireSession())return; const db=read(),u=currentUser(),s=stats(db,u.id); const months={}; s.completed.forEach(a=>{const e=eventById(db,a.eventId); const k=new Date(e.date).toLocaleDateString(undefined,{month:'short'}); months[k]=(months[k]||0)+a.hours;}); const entries=Object.entries(months); app.innerHTML=loggedLayout(`<div class="impact-hero"><div><p class="eyebrow">PERSONAL IMPACT</p><h2>Your verified contribution, clearly documented.</h2><p>Hours are added only after an organizer marks attendance as present and the shift as completed.</p></div><button class="outline-button" data-action="print-report">Print report</button></div><div class="impact-metrics"><section><b>${s.hours}</b><span>verified service hours</span></section><section><b>${s.events}</b><span>completed events</span></section><section><b>${s.attendance}%</b><span>attendance rate</span></section></div><section class="section-card"><p class="eyebrow">MONTHLY ACTIVITY</p><h3>Verified hours by month</h3><div class="bar-chart">${entries.length?entries.map(([m,v])=>`<div><span style="height:${Math.max(18,v*12)}px"></span><b>${v}h</b><small>${m}</small></div>`).join(''):'<p class="empty">Complete a verified shift to see activity here.</p>'}</div></section><section class="section-card"><p class="eyebrow">MILESTONES</p><h3>Progress markers</h3><div class="milestones">${[5,10,25].map(n=>`<div class="${s.hours>=n?'reached':''}"><b>${s.hours>=n?'✓':'○'}</b><span>${n} hours</span><small>${s.hours>=n?'Reached':'In progress'}</small></div>`).join('')}</div></section>`,'impact'); }
+function impactPage() {
+  if (!requireSession()) return;
+  const db = read(),
+    u = currentUser(),
+    s = stats(db, u.id);
+  const months = {};
+  s.completed.forEach((a) => {
+    const e = eventById(db, a.eventId);
+    const k = new Date(e.date).toLocaleDateString(undefined, {
+      month: "short",
+    });
+    months[k] = (months[k] || 0) + a.hours;
+  });
+  const entries = Object.entries(months);
+  app.innerHTML = loggedLayout(
+    `<div class="impact-hero"><div><p class="eyebrow">PERSONAL IMPACT</p><h2>Your verified contribution, clearly documented.</h2><p>Hours are added only after an organizer marks attendance as present and the shift as completed.</p></div><button class="outline-button" data-action="print-report">Print report</button></div><div class="impact-metrics"><section><b>${s.hours}</b><span>verified service hours</span></section><section><b>${s.events}</b><span>completed events</span></section><section><b>${s.attendance}%</b><span>attendance rate</span></section></div><section class="section-card"><p class="eyebrow">MONTHLY ACTIVITY</p><h3>Verified hours by month</h3><div class="bar-chart">${entries.length ? entries.map(([m, v]) => `<div><span style="height:${Math.max(18, v * 12)}px"></span><b>${v}h</b><small>${m}</small></div>`).join("") : '<p class="empty">Complete a verified shift to see activity here.</p>'}</div></section><section class="section-card"><p class="eyebrow">MILESTONES</p><h3>Progress markers</h3><div class="milestones">${[5, 10, 25].map((n) => `<div class="${s.hours >= n ? "reached" : ""}"><b>${s.hours >= n ? "✓" : "○"}</b><span>${n} hours</span><small>${s.hours >= n ? "Reached" : "In progress"}</small></div>`).join("")}</div></section>`,
+    "impact",
+  );
+}
 
-function adminPage(sub='admin') { if(!requireSession())return; const db=read(),u=currentUser(); if(u.role!=='admin'){location.hash='#dashboard';return;} if(sub==='admin-volunteers'){app.innerHTML=loggedLayout(volunteersAdmin(db),'admin-volunteers');return;} if(sub==='admin-reports'){app.innerHTML=loggedLayout(reportsAdmin(db),'admin-reports');return;} const active=db.events.filter(e=>e.status==='Active').length, scheduled=db.assignments.filter(a=>a.status==='Scheduled').length, pending=db.applications.filter(a=>a.status==='Pending').length; app.innerHTML=loggedLayout(`<div class="admin-metrics"><section><span>Registered volunteers</span><b>${db.users.filter(x=>x.role==='volunteer').length}</b></section><section><span>Verified profiles</span><b>${db.profiles.filter(x=>x.verified).length}</b></section><section><span>Active events</span><b>${active}</b></section><section><span>Pending applications</span><b>${pending}</b></section><section><span>Scheduled shifts</span><b>${scheduled}</b></section></div><div class="admin-grid"><section class="section-card"><div class="card-title"><div><p class="eyebrow">APPLICATION REVIEW</p><h3>Pending decisions</h3></div><a href="#admin-volunteers">Volunteer directory →</a></div>${db.applications.filter(a=>a.status==='Pending').map(a=>adminAppRow(db,a)).join('')||'<div class="empty">No applications waiting for review.</div>'}</section><section class="section-card"><div class="card-title"><div><p class="eyebrow">CREATE OPPORTUNITY</p><h3>New event</h3></div></div><form id="event-form" class="compact-form"><label>Event title<input name="title" required maxlength="80"></label><div class="two"><label>Date<input name="date" type="date" required></label><label>City<input name="city" required></label></div><div class="two"><label>Category<input name="category" required placeholder="Awareness"></label><label>Role<input name="role" required placeholder="Information desk"></label></div><div class="two"><label>Capacity<input name="capacity" type="number" min="1" value="3" required></label><label>Shift start<input name="start" type="datetime-local" required></label></div><label>Required skills <span class="hint">comma-separated</span><input name="skills" required></label><label>Short description<textarea name="description" required maxlength="280"></textarea></label><button class="button" type="submit">Create event</button></form></section><section class="section-card span-2"><div class="card-title"><div><p class="eyebrow">RECENT ACTIVITY</p><h3>Platform log</h3></div></div>${db.logs.slice(0,6).map(l=>`<div class="activity"><span></span><div>${escapeHtml(l.message)}<small>${escapeHtml(l.time)}</small></div></div>`).join('')}</section></div>`,'admin'); }
-function adminAppRow(db,a) { const e=eventById(db,a.eventId),v=db.users.find(u=>u.id===a.userId),p=getProfile(db,a.userId); return `<div class="review-row"><div><b>${escapeHtml(v.name)}</b><span>${escapeHtml(e.title)} · ${escapeHtml(a.role)}</span><small>${p.verified?'Profile verified':'Profile unverified'}</small></div><div><button class="outline-button" data-action="app-decision" data-id="${a.id}" data-decision="Rejected">Reject</button><button class="button small" data-action="app-decision" data-id="${a.id}" data-decision="Approved">Approve</button></div></div>`; }
-function volunteersAdmin(db) { const volunteers=db.users.filter(u=>u.role==='volunteer'); return `<section class="section-card"><div class="card-title"><div><p class="eyebrow">VOLUNTEERS</p><h3>Profile verification & shift assignment</h3></div></div><div class="table-wrap"><table><thead><tr><th>Volunteer</th><th>Skills</th><th>Verification</th><th>Assign shift</th></tr></thead><tbody>${volunteers.map(v=>{const p=getProfile(db,v.id),approved=db.applications.filter(a=>a.userId===v.id&&a.status==='Approved'&&!db.assignments.some(s=>s.eventId===a.eventId&&s.userId===v.id));return `<tr><td><b>${escapeHtml(v.name)}</b><small>${escapeHtml(v.email)}</small></td><td>${escapeHtml(p.skills.join(', '))}</td><td><button class="link-button" data-action="verify" data-id="${v.id}">${p.verified?'Verified ✓':'Verify profile'}</button></td><td>${approved.length?`<select data-assign-select="${v.id}">${approved.map(a=>{const e=eventById(db,a.eventId);return `<option value="${a.id}">${escapeHtml(e.title)} — ${escapeHtml(a.role)}</option>`}).join('')}</select><button class="button small" data-action="assign" data-user="${v.id}">Assign</button>`:'No approved applications'}</td></tr>`}).join('')}</tbody></table></div></section>`; }
-function reportsAdmin(db) { const assignments=db.assignments; return `<section class="section-card"><div class="card-title"><div><p class="eyebrow">PARTICIPATION REPORT</p><h3>Attendance and verified hours</h3></div><button class="outline-button" data-action="print-report">Print report</button></div><div class="table-wrap"><table><thead><tr><th>Volunteer</th><th>Event</th><th>Shift</th><th>Attendance</th><th>Hours</th><th></th></tr></thead><tbody>${assignments.map(a=>{const u=db.users.find(x=>x.id===a.userId),e=eventById(db,a.eventId),s=e.shifts.find(x=>x.id===a.shiftId);return `<tr><td><b>${escapeHtml(u.name)}</b></td><td>${escapeHtml(e.title)}</td><td>${new Date(s.start).toLocaleString()}</td><td>${a.attendance?status(a.attendance):'Not recorded'}</td><td>${a.hours||0}</td><td>${a.status==='Scheduled'?`<button class="button small" data-action="attendance" data-id="${a.id}">Record present</button>`:''}</td></tr>`}).join('')||'<tr><td colspan="6" class="empty">No shifts assigned.</td></tr>'}</tbody></table></div></section>`; }
+function adminPage(sub = "admin") {
+  if (!requireSession()) return;
+  const db = read(),
+    u = currentUser();
+  if (u.role !== "admin") {
+    location.hash = "#dashboard";
+    return;
+  }
+  if (sub === "admin-volunteers") {
+    app.innerHTML = loggedLayout(volunteersAdmin(db), "admin-volunteers");
+    return;
+  }
+  if (sub === "admin-reports") {
+    app.innerHTML = loggedLayout(reportsAdmin(db), "admin-reports");
+    return;
+  }
+  const active = db.events.filter((e) => e.status === "Active").length,
+    scheduled = db.assignments.filter((a) => a.status === "Scheduled").length,
+    pending = db.applications.filter((a) => a.status === "Pending").length;
+  app.innerHTML = loggedLayout(
+    `<div class="admin-metrics"><section><span>Registered volunteers</span><b>${db.users.filter((x) => x.role === "volunteer").length}</b></section><section><span>Verified profiles</span><b>${db.profiles.filter((x) => x.verified).length}</b></section><section><span>Active events</span><b>${active}</b></section><section><span>Pending applications</span><b>${pending}</b></section><section><span>Scheduled shifts</span><b>${scheduled}</b></section></div><div class="admin-grid"><section class="section-card"><div class="card-title"><div><p class="eyebrow">APPLICATION REVIEW</p><h3>Pending decisions</h3></div><a href="#admin-volunteers">Volunteer directory →</a></div>${
+      db.applications
+        .filter((a) => a.status === "Pending")
+        .map((a) => adminAppRow(db, a))
+        .join("") ||
+      '<div class="empty">No applications waiting for review.</div>'
+    }</section><section class="section-card"><div class="card-title"><div><p class="eyebrow">CREATE OPPORTUNITY</p><h3>New event</h3></div></div><form id="event-form" class="compact-form"><label>Event title<input name="title" required maxlength="80"></label><div class="two"><label>Date<input name="date" type="date" required></label><label>City<input name="city" required></label></div><div class="two"><label>Category<input name="category" required placeholder="Awareness"></label><label>Role<input name="role" required placeholder="Information desk"></label></div><div class="two"><label>Capacity<input name="capacity" type="number" min="1" value="3" required></label><label>Shift start<input name="start" type="datetime-local" required></label></div><label>Required skills <span class="hint">comma-separated</span><input name="skills" required></label><label>Short description<textarea name="description" required maxlength="280"></textarea></label><button class="button" type="submit">Create event</button></form></section><section class="section-card span-2"><div class="card-title"><div><p class="eyebrow">RECENT ACTIVITY</p><h3>Platform log</h3></div></div>${db.logs
+      .slice(0, 6)
+      .map(
+        (l) =>
+          `<div class="activity"><span></span><div>${escapeHtml(l.message)}<small>${escapeHtml(l.time)}</small></div></div>`,
+      )
+      .join("")}</section></div>`,
+    "admin",
+  );
+}
+function adminAppRow(db, a) {
+  const e = eventById(db, a.eventId),
+    v = db.users.find((u) => u.id === a.userId),
+    p = getProfile(db, a.userId);
+  return `<div class="review-row"><div><b>${escapeHtml(v.name)}</b><span>${escapeHtml(e.title)} · ${escapeHtml(a.role)}</span><small>${p.verified ? "Profile verified" : "Profile unverified"}</small></div><div><button class="outline-button" data-action="app-decision" data-id="${a.id}" data-decision="Rejected">Reject</button><button class="button small" data-action="app-decision" data-id="${a.id}" data-decision="Approved">Approve</button></div></div>`;
+}
+function volunteersAdmin(db) {
+  const volunteers = db.users.filter((u) => u.role === "volunteer");
+  return `<section class="section-card"><div class="card-title"><div><p class="eyebrow">VOLUNTEERS</p><h3>Profile verification & shift assignment</h3></div></div><div class="table-wrap"><table><thead><tr><th>Volunteer</th><th>Skills</th><th>Verification</th><th>Assign shift</th></tr></thead><tbody>${volunteers
+    .map((v) => {
+      const p = getProfile(db, v.id),
+        approved = db.applications.filter(
+          (a) =>
+            a.userId === v.id &&
+            a.status === "Approved" &&
+            !db.assignments.some(
+              (s) => s.eventId === a.eventId && s.userId === v.id,
+            ),
+        );
+      return `<tr><td><b>${escapeHtml(v.name)}</b><small>${escapeHtml(v.email)}</small></td><td>${escapeHtml(p.skills.join(", "))}</td><td><button class="link-button" data-action="verify" data-id="${v.id}">${p.verified ? "Verified ✓" : "Verify profile"}</button></td><td>${
+        approved.length
+          ? `<select data-assign-select="${v.id}">${approved
+              .map((a) => {
+                const e = eventById(db, a.eventId);
+                return `<option value="${a.id}">${escapeHtml(e.title)} — ${escapeHtml(a.role)}</option>`;
+              })
+              .join(
+                "",
+              )}</select><button class="button small" data-action="assign" data-user="${v.id}">Assign</button>`
+          : "No approved applications"
+      }</td></tr>`;
+    })
+    .join("")}</tbody></table></div></section>`;
+}
+function reportsAdmin(db) {
+  const assignments = db.assignments;
+  return `<section class="section-card"><div class="card-title"><div><p class="eyebrow">PARTICIPATION REPORT</p><h3>Attendance and verified hours</h3></div><button class="outline-button" data-action="print-report">Print report</button></div><div class="table-wrap"><table><thead><tr><th>Volunteer</th><th>Event</th><th>Shift</th><th>Attendance</th><th>Hours</th><th></th></tr></thead><tbody>${
+    assignments
+      .map((a) => {
+        const u = db.users.find((x) => x.id === a.userId),
+          e = eventById(db, a.eventId),
+          s = e.shifts.find((x) => x.id === a.shiftId);
+        return `<tr><td><b>${escapeHtml(u.name)}</b></td><td>${escapeHtml(e.title)}</td><td>${new Date(s.start).toLocaleString()}</td><td>${a.attendance ? status(a.attendance) : "Not recorded"}</td><td>${a.hours || 0}</td><td>${a.status === "Scheduled" ? `<button class="button small" data-action="attendance" data-id="${a.id}">Record present</button>` : ""}</td></tr>`;
+      })
+      .join("") ||
+    '<tr><td colspan="6" class="empty">No shifts assigned.</td></tr>'
+  }</tbody></table></div></section>`;
+}
 
-function handleAuth(form) { const data=new FormData(form), db=read(),mode=form.dataset.mode,email=data.get('email').trim().toLowerCase(); if(mode==='register'){ if(db.users.some(u=>u.email===email))return toast('A demo account already uses that email. Please sign in.','error'); const u={id:uid('u'),name:data.get('name').trim(),email,role:'volunteer'}; db.users.push(u); db.profiles.push({userId:u.id,phone:'',city:'',bio:'',skills:[],interests:[],experience:'',preferredRoles:[],availability:[],verified:false}); db.session={userId:u.id}; addLog(db,`${u.name} created a demonstration volunteer profile.`); save(db);location.hash='#profile';return; } const u=db.users.find(x=>x.email===email); if(!u)return toast('No demonstration account was found for that email.','error'); db.session={userId:u.id};save(db);location.hash=u.role==='admin'?'#admin':'#dashboard'; }
-function applyEvent(form) { const db=read(),u=currentUser(),e=eventById(db,form.dataset.event); if(db.applications.some(a=>a.userId===u.id&&a.eventId===e.id))return toast('You have already applied to this event.','error'); const p=getProfile(db,u.id); if(!p.verified)return toast('Complete your profile before applying. Your profile can be verified by the admin demo.','error'); db.applications.push({id:uid('app'),userId:u.id,eventId:e.id,role:new FormData(form).get('role'),status:'Pending',created:new Date().toISOString().slice(0,10)}); addLog(db,`${u.name} applied for ${e.title}.`);save(db);toast('Application submitted for organizer review.');eventsPage(); }
-function saveProfile(form) { const db=read(),u=currentUser(),p=getProfile(db,u.id),data=new FormData(form); u.name=data.get('name').trim();p.city=data.get('city').trim();p.phone=data.get('phone').trim();p.skills=textList(data.get('skills'));p.interests=textList(data.get('interests'));p.preferredRoles=textList(data.get('roles'));p.bio=data.get('bio').trim();p.experience=data.get('experience').trim();p.availability=data.getAll('days');addLog(db,`${u.name} updated their profile and availability.`);save(db);toast('Profile saved. Your recommendations are refreshed.');dashboard(); }
-function createEvent(form) { const db=read(),d=new FormData(form), title=d.get('title').trim(),date=d.get('date'),start=d.get('start'); const e={id:uid('evt'),title,category:d.get('category').trim(),city:d.get('city').trim(),date,description:d.get('description').trim(),skills:textList(d.get('skills')),interests:[],roles:[{name:d.get('role').trim(),capacity:Number(d.get('capacity'))}],shifts:[{id:uid('shift'),start,end:new Date(new Date(start).getTime()+4*3600000).toISOString().slice(0,16),role:d.get('role').trim(),location:d.get('city').trim()}],status:'Active'}; db.events.unshift(e);addLog(db,`Administrator created ${title}.`);save(db);toast('Event created and visible in Explore Events.');adminPage(); }
-function assignShift(userId,appId) { const db=read(),application=db.applications.find(a=>a.id===appId),e=eventById(db,application.eventId),shift=e.shifts.find(s=>s.role===application.role)||e.shifts[0],p=getProfile(db,userId); const day=new Date(shift.start).toLocaleDateString('en-US',{weekday:'long'}); if(!p.availability.includes(day))return toast(`Assignment blocked: volunteer has not declared ${day} availability.`,'error'); const conflict=db.assignments.some(a=>{if(a.userId!==userId||a.status!=='Scheduled')return false;const es=eventById(db,a.eventId).shifts.find(s=>s.id===a.shiftId);return new Date(shift.start)<new Date(es.end)&&new Date(shift.end)>new Date(es.start);}); if(conflict)return toast('Assignment blocked: this shift overlaps an existing scheduled shift.','error'); const assignedCount=db.assignments.filter(a=>a.eventId===e.id&&a.shiftId===shift.id&&a.status==='Scheduled').length,capacity=e.roles.find(r=>r.name===shift.role)?.capacity||0; if(assignedCount>=capacity)return toast('Assignment blocked: the selected role is at capacity.','error');db.assignments.push({id:uid('as'),userId,eventId:e.id,shiftId:shift.id,status:'Scheduled',attendance:null,hours:0});addLog(db,`${db.users.find(u=>u.id===userId).name} was assigned to ${e.title}.`);save(db);toast('Shift assigned after availability and conflict checks.');adminPage('admin-volunteers'); }
+function handleAuth(form) {
+  const data = new FormData(form),
+    db = read(),
+    mode = form.dataset.mode,
+    email = data.get("email").trim().toLowerCase();
+  if (mode === "register") {
+    if (db.users.some((u) => u.email === email))
+      return toast(
+        "A demo account already uses that email. Please sign in.",
+        "error",
+      );
+    const u = {
+      id: uid("u"),
+      name: data.get("name").trim(),
+      email,
+      role: "volunteer",
+    };
+    db.users.push(u);
+    db.profiles.push({
+      userId: u.id,
+      phone: "",
+      city: "",
+      bio: "",
+      skills: [],
+      interests: [],
+      experience: "",
+      preferredRoles: [],
+      availability: [],
+      verified: false,
+    });
+    db.session = { userId: u.id };
+    addLog(db, `${u.name} created a demonstration volunteer profile.`);
+    save(db);
+    location.hash = "#profile";
+    return;
+  }
+  const u = db.users.find((x) => x.email === email);
+  if (!u)
+    return toast("No demonstration account was found for that email.", "error");
+  db.session = { userId: u.id };
+  save(db);
+  location.hash = u.role === "admin" ? "#admin" : "#dashboard";
+}
+function applyEvent(form) {
+  const db = read(),
+    u = currentUser(),
+    e = eventById(db, form.dataset.event);
+  if (db.applications.some((a) => a.userId === u.id && a.eventId === e.id))
+    return toast("You have already applied to this event.", "error");
+  const p = getProfile(db, u.id);
+  if (!p.verified)
+    return toast(
+      "Complete your profile before applying. Your profile can be verified by the admin demo.",
+      "error",
+    );
+  db.applications.push({
+    id: uid("app"),
+    userId: u.id,
+    eventId: e.id,
+    role: new FormData(form).get("role"),
+    status: "Pending",
+    created: new Date().toISOString().slice(0, 10),
+  });
+  addLog(db, `${u.name} applied for ${e.title}.`);
+  save(db);
+  toast("Application submitted for organizer review.");
+  eventsPage();
+}
+function saveProfile(form) {
+  const db = read(),
+    u = currentUser(),
+    p = getProfile(db, u.id),
+    data = new FormData(form);
+  u.name = data.get("name").trim();
+  p.city = data.get("city").trim();
+  p.phone = data.get("phone").trim();
+  p.skills = textList(data.get("skills"));
+  p.interests = textList(data.get("interests"));
+  p.preferredRoles = textList(data.get("roles"));
+  p.bio = data.get("bio").trim();
+  p.experience = data.get("experience").trim();
+  p.availability = data.getAll("days");
+  addLog(db, `${u.name} updated their profile and availability.`);
+  save(db);
+  toast("Profile saved. Your recommendations are refreshed.");
+  dashboard();
+}
+function createEvent(form) {
+  const db = read(),
+    d = new FormData(form),
+    title = d.get("title").trim(),
+    date = d.get("date"),
+    start = d.get("start");
+  const e = {
+    id: uid("evt"),
+    title,
+    category: d.get("category").trim(),
+    city: d.get("city").trim(),
+    date,
+    description: d.get("description").trim(),
+    skills: textList(d.get("skills")),
+    interests: [],
+    roles: [
+      { name: d.get("role").trim(), capacity: Number(d.get("capacity")) },
+    ],
+    shifts: [
+      {
+        id: uid("shift"),
+        start,
+        end: new Date(new Date(start).getTime() + 4 * 3600000)
+          .toISOString()
+          .slice(0, 16),
+        role: d.get("role").trim(),
+        location: d.get("city").trim(),
+      },
+    ],
+    status: "Active",
+  };
+  db.events.unshift(e);
+  addLog(db, `Administrator created ${title}.`);
+  save(db);
+  toast("Event created and visible in Explore Events.");
+  adminPage();
+}
+function assignShift(userId, appId) {
+  const db = read(),
+    application = db.applications.find((a) => a.id === appId),
+    e = eventById(db, application.eventId),
+    shift = e.shifts.find((s) => s.role === application.role) || e.shifts[0],
+    p = getProfile(db, userId);
+  const day = new Date(shift.start).toLocaleDateString("en-US", {
+    weekday: "long",
+  });
+  if (!p.availability.includes(day))
+    return toast(
+      `Assignment blocked: volunteer has not declared ${day} availability.`,
+      "error",
+    );
+  const conflict = db.assignments.some((a) => {
+    if (a.userId !== userId || a.status !== "Scheduled") return false;
+    const es = eventById(db, a.eventId).shifts.find((s) => s.id === a.shiftId);
+    return (
+      new Date(shift.start) < new Date(es.end) &&
+      new Date(shift.end) > new Date(es.start)
+    );
+  });
+  if (conflict)
+    return toast(
+      "Assignment blocked: this shift overlaps an existing scheduled shift.",
+      "error",
+    );
+  const assignedCount = db.assignments.filter(
+      (a) =>
+        a.eventId === e.id &&
+        a.shiftId === shift.id &&
+        a.status === "Scheduled",
+    ).length,
+    capacity = e.roles.find((r) => r.name === shift.role)?.capacity || 0;
+  if (assignedCount >= capacity)
+    return toast(
+      "Assignment blocked: the selected role is at capacity.",
+      "error",
+    );
+  db.assignments.push({
+    id: uid("as"),
+    userId,
+    eventId: e.id,
+    shiftId: shift.id,
+    status: "Scheduled",
+    attendance: null,
+    hours: 0,
+  });
+  addLog(
+    db,
+    `${db.users.find((u) => u.id === userId).name} was assigned to ${e.title}.`,
+  );
+  save(db);
+  toast("Shift assigned after availability and conflict checks.");
+  adminPage("admin-volunteers");
+}
 
-document.addEventListener('submit',e=>{e.preventDefault();if(e.target.id==='auth-form')handleAuth(e.target);if(e.target.id==='apply-form')applyEvent(e.target);if(e.target.id==='profile-form')saveProfile(e.target);if(e.target.id==='event-form')createEvent(e.target);});
-document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;const action=b.dataset.action;if(action==='demo-login'){const db=read();db.session={userId:b.dataset.role==='admin'?'u_admin':'u_demo'};save(db);location.hash=b.dataset.role==='admin'?'#admin':'#dashboard';}if(action==='logout'){const db=read();db.session=null;save(db);location.hash='#home';}if(action==='reset'){if(confirm('Reset all MED2SYNC browser data to the original demo state?')){localStorage.removeItem(DB);seed();toast('Demo data reset.');location.hash='#home';}}if(action==='show-password'){const input=b.previousElementSibling;input.type=input.type==='password'?'text':'password';b.textContent=input.type==='password'?'Show':'Hide';}if(action==='cancel-app'){const db=read(),a=db.applications.find(x=>x.id===b.dataset.id);a.status='Cancelled';addLog(db,`${currentUser().name} cancelled an application.`);save(db);toast('Application cancelled.');applicationsPage();}if(action==='app-decision'){const db=read(),a=db.applications.find(x=>x.id===b.dataset.id);a.status=b.dataset.decision;addLog(db,`Application for ${eventById(db,a.eventId).title} was ${a.status.toLowerCase()}.`);save(db);toast(`Application ${a.status.toLowerCase()}.`);adminPage();}if(action==='verify'){const db=read(),p=getProfile(db,b.dataset.id);p.verified=!p.verified;addLog(db,`${db.users.find(x=>x.id===b.dataset.id).name}'s profile verification was updated.`);save(db);toast(p.verified?'Volunteer profile verified.':'Volunteer profile marked unverified.');adminPage('admin-volunteers');}if(action==='assign'){const select=document.querySelector(`[data-assign-select="${b.dataset.user}"]`);assignShift(b.dataset.user,select.value);}if(action==='attendance'){const db=read(),a=db.assignments.find(x=>x.id===b.dataset.id),e=eventById(db,a.eventId),s=e.shifts.find(x=>x.id===a.shiftId);a.attendance='Present';a.status='Completed';a.hours=Math.round((new Date(s.end)-new Date(s.start))/3600000);addLog(db,`Attendance recorded for ${db.users.find(u=>u.id===a.userId).name}: ${a.hours} verified hours.`);save(db);toast('Attendance recorded and verified hours updated.');adminPage('admin-reports');}if(action==='print-report')window.print();if(action==='toggle-menu')$('#public-nav').classList.toggle('open');if(action==='toggle-side')$('.side').classList.toggle('open');});
-document.addEventListener('input',e=>{if(['event-search','category-filter','city-filter'].includes(e.target.id)){const q=($('#event-search')?.value||'').toLowerCase(),cat=$('#category-filter')?.value||'',city=$('#city-filter')?.value||'';document.querySelectorAll('.event-card').forEach(card=>{const visible=card.textContent.toLowerCase().includes(q)&&(!cat||card.textContent.includes(cat))&&(!city||card.textContent.includes(city));card.style.display=visible?'':'none';});}});
-function router(){seed();const r=location.hash.slice(1).split('?')[0]||'home';if(r==='home'||r==='about'||r==='how')landing();else if(r==='login'||r==='register')authPage(r);else if(r==='events')eventsPage();else if(r==='dashboard')dashboard();else if(r==='profile')profilePage();else if(r==='applications')applicationsPage();else if(r==='impact')impactPage();else if(r.startsWith('admin'))adminPage(r);else landing();} window.addEventListener('hashchange',router);router();
+document.addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (e.target.id === "auth-form") handleAuth(e.target);
+  if (e.target.id === "apply-form") applyEvent(e.target);
+  if (e.target.id === "profile-form") saveProfile(e.target);
+  if (e.target.id === "event-form") createEvent(e.target);
+});
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-action]");
+  if (!b) return;
+  const action = b.dataset.action;
+  if (action === "demo-login") {
+    const db = read();
+    db.session = { userId: b.dataset.role === "admin" ? "u_admin" : "u_demo" };
+    save(db);
+    location.hash = b.dataset.role === "admin" ? "#admin" : "#dashboard";
+  }
+  if (action === "logout") {
+    const db = read();
+    db.session = null;
+    save(db);
+    location.hash = "#home";
+  }
+  if (action === "reset") {
+    if (
+      confirm("Reset all MED2SYNC browser data to the original demo state?")
+    ) {
+      localStorage.removeItem(DB);
+      seed();
+      toast("Demo data reset.");
+      location.hash = "#home";
+    }
+  }
+  if (action === "show-password") {
+    const input = b.previousElementSibling;
+    input.type = input.type === "password" ? "text" : "password";
+    b.textContent = input.type === "password" ? "Show" : "Hide";
+  }
+  if (action === "cancel-app") {
+    const db = read(),
+      a = db.applications.find((x) => x.id === b.dataset.id);
+    a.status = "Cancelled";
+    addLog(db, `${currentUser().name} cancelled an application.`);
+    save(db);
+    toast("Application cancelled.");
+    applicationsPage();
+  }
+  if (action === "app-decision") {
+    const db = read(),
+      a = db.applications.find((x) => x.id === b.dataset.id);
+    a.status = b.dataset.decision;
+    addLog(
+      db,
+      `Application for ${eventById(db, a.eventId).title} was ${a.status.toLowerCase()}.`,
+    );
+    save(db);
+    toast(`Application ${a.status.toLowerCase()}.`);
+    adminPage();
+  }
+  if (action === "verify") {
+    const db = read(),
+      p = getProfile(db, b.dataset.id);
+    p.verified = !p.verified;
+    addLog(
+      db,
+      `${db.users.find((x) => x.id === b.dataset.id).name}'s profile verification was updated.`,
+    );
+    save(db);
+    toast(
+      p.verified
+        ? "Volunteer profile verified."
+        : "Volunteer profile marked unverified.",
+    );
+    adminPage("admin-volunteers");
+  }
+  if (action === "assign") {
+    const select = document.querySelector(
+      `[data-assign-select="${b.dataset.user}"]`,
+    );
+    assignShift(b.dataset.user, select.value);
+  }
+  if (action === "attendance") {
+    const db = read(),
+      a = db.assignments.find((x) => x.id === b.dataset.id),
+      e = eventById(db, a.eventId),
+      s = e.shifts.find((x) => x.id === a.shiftId);
+    a.attendance = "Present";
+    a.status = "Completed";
+    a.hours = Math.round((new Date(s.end) - new Date(s.start)) / 3600000);
+    addLog(
+      db,
+      `Attendance recorded for ${db.users.find((u) => u.id === a.userId).name}: ${a.hours} verified hours.`,
+    );
+    save(db);
+    toast("Attendance recorded and verified hours updated.");
+    adminPage("admin-reports");
+  }
+  if (action === "print-report") window.print();
+  if (action === "toggle-menu") $("#public-nav").classList.toggle("open");
+  if (action === "toggle-side") $(".side").classList.toggle("open");
+});
+document.addEventListener("input", (e) => {
+  if (
+    ["event-search", "category-filter", "city-filter"].includes(e.target.id)
+  ) {
+    const q = ($("#event-search")?.value || "").toLowerCase(),
+      cat = $("#category-filter")?.value || "",
+      city = $("#city-filter")?.value || "";
+    document.querySelectorAll(".event-card").forEach((card) => {
+      const visible =
+        card.textContent.toLowerCase().includes(q) &&
+        (!cat || card.textContent.includes(cat)) &&
+        (!city || card.textContent.includes(city));
+      card.style.display = visible ? "" : "none";
+    });
+  }
+});
+function router() {
+  seed();
+  const r = location.hash.slice(1).split("?")[0] || "home";
+  if (r === "home" || r === "about" || r === "how") landing();
+  else if (r === "login" || r === "register") authPage(r);
+  else if (r === "events") eventsPage();
+  else if (r === "dashboard") dashboard();
+  else if (r === "profile") profilePage();
+  else if (r === "applications") applicationsPage();
+  else if (r === "impact") impactPage();
+  else if (r.startsWith("admin")) adminPage(r);
+  else landing();
+}
+window.addEventListener("hashchange", router);
+router();
