@@ -1,33 +1,72 @@
-MED2SYNC
-MED2SYNC is a browser-only Medical Volunteer Coordination Platform created as a CSE326 academic prototype. It coordinates only non-clinical volunteer work: registration, logistics, documentation, awareness support, information desks and crowd coordination.
+# MED2SYNC
 
-Run locally
-From the repository root, run npm run dev and open http://localhost:3000. The included development server uses only Node.js built-ins, so no package installation is needed. You can also open dist/index.html directly in a modern browser.
+MED2SYNC is a frontend prototype for coordinating non-clinical medical-event volunteers. It brings volunteer registration, opportunity discovery, applications, shift allocation and participation reporting into one simple browser-based experience.
 
-Demo access
-Volunteer: volunteer@med2sync.demo with any 4+ character demonstration password
-Administrator: admin@med2sync.demo with any 4+ character demonstration password
-Use the sample-access buttons on the sign-in page for the fastest route. Passwords are never saved; authentication is simulated through localStorage.
+> This is an academic prototype. It does not provide clinical guidance or collect real patient information.
 
-Features
-Volunteer profiles, skills, interests, role preferences and weekly availability
-Event discovery, search, compatibility scores, duplicate-application prevention and cancellation
-Admin application approval/rejection, profile verification, event creation and shift assignment
-Shift conflict, capacity and availability validation before an assignment
-Attendance confirmation and automatic verified-service-hour calculation
-Personal impact metrics, CSS chart, milestones, printable report and resettable demo data
-Data and architecture
-The single-page application uses HTML, CSS and vanilla JavaScript. app.js stores JSON collections for users, profiles, events, applications, assignments and activity logs under one namespaced localStorage key. It only creates sample data once, and Reset Demo Data deliberately restores it.
+## Features
 
-Matching algorithm
-For each active event, MED2SYNC calculates:
+- Volunteer profiles with skills, interests, experience and availability
+- Event discovery with search and compatibility scoring
+- Applications, cancellations and duplicate-application prevention
+- Administrator tools for volunteer verification, decisions, events and shift assignment
+- Shift capacity, availability and conflict validation
+- Attendance tracking and verified volunteer-hour reporting
+- Responsive interface, printable reports and resettable demo data
 
-skills × 0.4 + availability × 0.3 + interests × 0.2 + experience × 0.1
+## Technology
 
-Each component becomes a 0–100 score from saved profile and event details. Results are sorted by the final score. This is an explainable rule-based recommendation, not AI.
+- HTML, CSS and vanilla JavaScript
+- Browser `localStorage` for demonstration data
+- A small Node.js development server with no third-party dependencies
+- Static deployment configuration for Vercel
 
-Limitations and next steps
-This frontend-only prototype has no real user identity, multi-device sync, email, sensitive-data collection, clinical decisions, or production authorization. Browser data is device-specific. A production system would need secure server-side authentication, access control, encrypted storage and privacy review.
+## Getting started
 
-Deployment
-Deploy the contents of dist as a static site (including the assets folder). The included hosting manifest targets this directory and is compatible with static-hosting services such as Vercel.
+### Prerequisites
+
+Install a current version of [Node.js](https://nodejs.org/).
+
+### Run locally
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser. No `npm install` step is required.
+
+## Demo access
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Volunteer | `volunteer@med2sync.demo` | Any 4 or more characters |
+| Administrator | `admin@med2sync.demo` | Any 4 or more characters |
+
+The sample-access buttons on the sign-in screen provide the fastest way to explore the application. Passwords are never stored; authentication is simulated for the demo.
+
+## Project structure
+
+```text
+.
+├── dist/                 # Static application files
+│   ├── assets/           # Images and other assets
+│   ├── app.js            # Application behaviour and demo data
+│   ├── index.html        # HTML entry point
+│   └── style.css         # Visual design and responsive styles
+├── docs/                 # Project notes and testing record
+├── scripts/              # Local development utilities
+├── package.json          # Project scripts
+└── vercel.json           # Static-hosting configuration
+```
+
+## Data and matching
+
+All demonstration data stays in the browser under a namespaced `localStorage` key. The event compatibility score is based on skills (40%), availability (30%), interests (20%) and experience (10%). Resetting the demo restores the original sample data.
+
+## Deployment
+
+The app is static. Deploy the contents of `dist/` to any static host. The included `vercel.json` is ready for Vercel deployments.
+
+## Limitations
+
+MED2SYNC is intentionally frontend-only. It has no real authentication, shared database, email notifications, access controls or production-grade privacy protections. A production version would require secure backend services, role-based access control and an appropriate privacy and security review.
