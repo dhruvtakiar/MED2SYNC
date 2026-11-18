@@ -1,0 +1,8 @@
+{
+  "name": "med2sync-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix MED2SYNC run dev",
+    "start": "npm --prefix MED2SYNC run start"
+  }
+}

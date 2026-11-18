@@ -4,7 +4,7 @@ MED2SYNC is a browser-only Medical Volunteer Coordination Platform created as a 
 
 ## Run locally
 
-Open `dist/index.html` in a modern browser, or serve the `dist` folder with any static server. No package install, API key, backend, account, or build process is needed.
+From the repository root, run `npm run dev` and open `http://localhost:3000`. The included development server uses only Node.js built-ins, so no package installation is needed. You can also open `dist/index.html` directly in a modern browser.
 
 ## Demo access
 
